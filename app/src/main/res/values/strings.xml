@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">mapbox_app</string>
+    <string name="access_token">pk.eyJ1IjoiYW1hbmhhbnMzMDYiLCJhIjoiY2pubDl3N2FxMDdyYjNycGR5bWw3amZ6aCJ9.afLj2d_zrMxuX8lYn3vgew</string>
+    <string name="only_twelve_stops_allowed">Twelve stops allowed only </string>
+    <string name="click_instructions">click on map to add waypoints </string>
+    <string name="successful_but_no_routes"> no route found </string>
+    <string name="no_success">failed to load </string>
+    <string name="destination">Destination</string>
+    <string name="origin">Origin</string>
+
+</resources>
