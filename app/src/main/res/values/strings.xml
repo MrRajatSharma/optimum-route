@@ -1,11 +1,17 @@
 <resources>
     <string name="app_name">mapbox_app</string>
-    <string name="access_token">pk.eyJ1IjoiYW1hbmhhbnMzMDYiLCJhIjoiY2pubDl3N2FxMDdyYjNycGR5bWw3amZ6aCJ9.afLj2d_zrMxuX8lYn3vgew</string>
+    <!--<string name="access_token">pk.eyJ1IjoiYW1hbmhhbnMzMDYiLCJhIjoiY2pubDl3N2FxMDdyYjNycGR5bWw3amZ6aCJ9.afLj2d_zrMxuX8lYn3vgew</string>-->
+    <string name="access_token">pk.eyJ1Ijoid29sZnJqIiwiYSI6ImNqdmt2aGw4ZzB0YzI0OWwybDI4cWJnMG8ifQ.VyEv-wUv8KLYsNIsg9RMDA</string>
     <string name="only_twelve_stops_allowed">Twelve stops allowed only </string>
     <string name="click_instructions">click on map to add waypoints </string>
     <string name="successful_but_no_routes"> no route found </string>
     <string name="no_success">failed to load </string>
     <string name="destination">Destination</string>
     <string name="origin">Origin</string>
+    <string name="user_location_permission_explanation">Permission for location</string>
+    <string name="user_location_permission_not_granted">Permission not granted</string>
+    <string name="tracking_enabled">Tracking enabled</string>
+    <string name="tracking_already_enabled">Tracking already enabled</string>
+    <string name="current_location">Current location</string>
 
 </resources>
