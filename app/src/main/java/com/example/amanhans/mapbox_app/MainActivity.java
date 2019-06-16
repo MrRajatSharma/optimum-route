@@ -2,11 +2,17 @@ package com.example.amanhans.mapbox_app;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.LinearSnapHelper;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SnapHelper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
@@ -17,6 +23,8 @@ import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
+import com.mapbox.api.matrix.v1.MapboxMatrix;
+import com.mapbox.api.matrix.v1.models.MatrixResponse;
 import com.mapbox.api.optimization.v1.MapboxOptimization;
 import com.mapbox.api.optimization.v1.models.OptimizationResponse;
 import com.mapbox.geojson.Feature;
@@ -24,6 +32,9 @@ import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
+import com.mapbox.mapboxsdk.annotations.Icon;
+import com.mapbox.mapboxsdk.annotations.IconFactory;
+import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.Polyline;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
@@ -45,13 +56,17 @@ import com.mapbox.mapboxsdk.plugins.places.autocomplete.PlaceAutocomplete;
 import com.mapbox.mapboxsdk.plugins.places.autocomplete.model.PlaceOptions;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
+import com.mapbox.turf.TurfConversion;
 
+import java.io.InputStream;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import timber.log.Timber;
 
 import static com.mapbox.core.constants.Constants.PRECISION_6;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage;
@@ -82,6 +97,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String symbolIconId = "symbolIconId";
     private String geojsonSourceLayerId = "geojsonSourceLayerId";
 
+    private RecyclerView recyclerView;
+    private MatrixApiLocationRecyclerViewAdapter matrixApiLocationRecyclerViewAdapter;
+    private ArrayList<SingleRecyclerViewMatrixLocation> matrixLocationList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,6 +121,28 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapView = findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
+
+        recyclerView = findViewById(R.id.matrix_api_recyclerview);
+        // Create list of positions from local GeoJSON file
+//        initPositionListFromGeoJsonFile();
+
+    }
+
+
+    private String loadGeoJsonFromAsset(String filename) {
+        try {
+            // Load GeoJSON file from local asset folder
+            InputStream is = getAssets().open(filename);
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            return new String(buffer, "UTF-8");
+        } catch (Exception exception) {
+            Timber.d(exception.toString(), "Exception Loading GeoJSON: ");
+            exception.printStackTrace();
+            return null;
+        }
     }
 
     @Override
@@ -128,9 +168,130 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 // Set up a new symbol layer for displaying the searched location's feature coordinates
                 setupLayer(style);
+                matrixLocationList = new ArrayList<>();
+
+                initMatrixLocationListForRecyclerView();
+
+                // Set up the recyclerview of charging station cards
+                initRecyclerView();
+
+                mapboxMap.setOnMarkerClickListener(new MapboxMap.OnMarkerClickListener() {
+                    @Override
+                    public boolean onMarkerClick(@NonNull Marker marker) {
+
+                        // Make a call to the Mapbox Matrix API
+                        int clickedMarker = getClickedMarkerNumInPositionList(marker);
+                        Log.i("Clicked marker", String.valueOf(clickedMarker));
+                        makeMapboxMatrixApiCall(clickedMarker, Point.fromLngLat(
+                                marker.getPosition().getLongitude(), marker.getPosition().getLatitude()));
+                        return false;
+                    }
+                });
+
+
             }
         });
         mapboxMap.addOnMapLongClickListener(this);
+    }
+
+
+    private int getClickedMarkerNumInPositionList(Marker clickedMarker) {
+        int clickedMarkerIndexPositionInList = -1;
+        if (clickedMarker != null) {
+            for (Marker singleMarker : mapboxMap.getMarkers()) {
+                if (singleMarker == clickedMarker) {
+                    clickedMarkerIndexPositionInList = mapboxMap.getMarkers().indexOf(singleMarker);
+                }
+            }
+            return clickedMarkerIndexPositionInList;
+        } else {
+            return 0;
+        }
+    }
+
+    private void initMatrixLocationListForRecyclerView() {
+        Log.i("init mll" , "stops size" + stops.size());
+        matrixLocationList.clear();
+        for (int i = 0; i < stops.size(); i++) {
+            Point feature = stops.get(i);
+            Log.i("init mll" , "called");
+
+            SingleRecyclerViewMatrixLocation singleRecyclerViewLocation = new SingleRecyclerViewMatrixLocation();
+//            singleRecyclerViewLocation.setName(feature.getStringProperty("Station_Name"));
+            singleRecyclerViewLocation.setName("Point " + String.valueOf(i + 1));
+
+            singleRecyclerViewLocation.setLocationLatLng(new LatLng(feature.latitude(), feature.longitude()));
+            matrixLocationList.add(singleRecyclerViewLocation);
+            Log.i("init mll" , "matrix loc size" + matrixLocationList.size());
+        }
+        for (Point feature : stops) {
+
+        }
+
+
+    }
+
+
+    private void initRecyclerView() {
+        matrixApiLocationRecyclerViewAdapter = new MatrixApiLocationRecyclerViewAdapter(this,
+                matrixLocationList);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext(),
+                LinearLayoutManager.HORIZONTAL, true));
+        recyclerView.setItemAnimator(new DefaultItemAnimator());
+        recyclerView.setAdapter(matrixApiLocationRecyclerViewAdapter);
+        SnapHelper snapHelper = new LinearSnapHelper();
+        snapHelper.attachToRecyclerView(recyclerView);
+    }
+
+    private void makeMapboxMatrixApiCall(final int markerPositionInList, Point pointOfClickedMarker) {
+
+// Build Mapbox Matrix API parameters
+        MapboxMatrix directionsMatrixClient = MapboxMatrix.builder()
+                .accessToken(getString(R.string.access_token))
+                .profile(DirectionsCriteria.PROFILE_DRIVING)
+                .coordinates(stops)
+                .build();
+
+// Handle the API response
+        directionsMatrixClient.enqueueCall(new Callback<MatrixResponse>() {
+            @Override
+            public void onResponse(Call<MatrixResponse> call,
+                                   Response<MatrixResponse> response) {
+                List<Double[]> durationsToAllOfTheLocationsFromTheOrigin = response.body().durations();
+                for (int x = 0; x < durationsToAllOfTheLocationsFromTheOrigin.size(); x++) {
+
+                    Log.i("x value", String.valueOf(x));
+
+                    String finalConvertedFormattedDistance = String.valueOf(new DecimalFormat("#.##")
+                            .format(TurfConversion.convertLength(
+                                    durationsToAllOfTheLocationsFromTheOrigin.get(markerPositionInList)[x],
+                                    "meters", "miles")));
+
+                    Log.i("final Distance", finalConvertedFormattedDistance);
+                    Log.i("marker position in list", String.valueOf(markerPositionInList));
+                    Log.i("matrixLocationList", matrixLocationList.size() +"     ---");
+                    Log.i("matrixLocationList", matrixLocationList.size() +"     ---" + matrixLocationList.get(x).toString());
+
+
+
+                    if (x == markerPositionInList) {
+                        matrixLocationList.get(x).setDistanceFromOrigin(finalConvertedFormattedDistance);
+                    }
+                    if (x != markerPositionInList) {
+                        matrixLocationList.get(x).setDistanceFromOrigin(finalConvertedFormattedDistance);
+
+                    }
+                    matrixApiLocationRecyclerViewAdapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<MatrixResponse> call, Throwable throwable) {
+                Toast.makeText(MainActivity.this, R.string.call_error,
+                        Toast.LENGTH_SHORT).show();
+                Timber.d( "onResponse onFailure");
+            }
+        });
     }
 
 
@@ -216,6 +377,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
                 }
 
+                Log.i("response body", response.body().trips().get(0).toString());
                 // Get most optimized route from API response
                 optimizedRoute = response.body().trips().get(0);
                 drawOptimizedRoute(optimizedRoute);
@@ -311,6 +473,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else {
             addDestinationMarker(point);
             addPointToStopsList(point);
+            initMatrixLocationListForRecyclerView();
+
             getOptimizedRoute(stops);
             Log.i("Stops", stops.get(0).toJson());
         }
@@ -353,6 +517,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     } else {
                         addDestinationMarker(point);
                         addPointToStopsList(point);
+                        initMatrixLocationListForRecyclerView();
                         getOptimizedRoute(stops);
                     }
 //                    // Move map camera to the selected location
@@ -458,16 +623,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onCameraTrackingChanged(int currentMode) {
-
     }
+
     @SuppressWarnings( {"MissingPermission"})
     @Override
     public void onLocationComponentClick() {
-        if (locationComponent.getLastKnownLocation() != null) {
-            Toast.makeText(this, String.format(getString(R.string.current_location),
-                    locationComponent.getLastKnownLocation().getLatitude(),
-                    locationComponent.getLastKnownLocation().getLongitude()), Toast.LENGTH_LONG).show();
-        }
+//        if (locationComponent.getLastKnownLocation() != null) {
+//            Toast.makeText(this, String.format(getString(R.string.current_location),
+//                    locationComponent.getLastKnownLocation().getLatitude(),
+//                    locationComponent.getLastKnownLocation().getLongitude()), Toast.LENGTH_LONG).show();
+//        }
     }
 
     @Override

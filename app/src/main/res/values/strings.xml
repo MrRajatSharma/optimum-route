@@ -13,5 +13,7 @@
     <string name="tracking_enabled">Tracking enabled</string>
     <string name="tracking_already_enabled">Tracking already enabled</string>
     <string name="current_location">Current location</string>
+    <string name="call_error">Error</string>
+    <string name="miles_distance">%1$s miles</string>
 
 </resources>
